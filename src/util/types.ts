@@ -428,7 +428,38 @@ export interface GridStrategyCardConfig {
      *   iconColor: red
      * ```
      */
-    card: LovelaceCardConfig;
+    card?: LovelaceCardConfig;
+
+    /**
+     * @description
+     * A template string that generates a card configuration.
+     * Supports Jinja2-like syntax including conditionals, variables, and functions.
+     * The template will be processed and should return valid JSON for a card configuration.
+     * @remarks
+     * Use the $entity variable to reference the current entity ID and $area for the current area.
+     * Supports common Home Assistant template functions like state_attr().
+     * @example
+     * ```yaml
+     * template: |-
+     *   {%- set current_area = '$area' -%}
+     *   {%- set friendly_name = state_attr($entity, 'friendly_name') -%}
+     *   {%- set adjusted_name = friendly_name.replace(current_area, '') | trim -%}
+     *   {%- if 'color_temp' in state_attr($entity, 'supported_color_modes') -%}
+     *     {{
+     *       {
+     *         'entity': $entity,
+     *         'name': adjusted_name,
+     *         'type': 'custom:mushroom-light-card',
+     *         'show_brightness_control': true,
+     *         'show_color_temp_control': true,
+     *         'collapsible_controls': true,
+     *         'use_light_color': true
+     *       } 
+     *     }}
+     *   {%- endif -%}
+     * ```
+     */
+    template?: string;
 }
 
 export interface BaseRowOptions extends RowFilterConfig, RowSortConfig, GridStrategyCardConfig {

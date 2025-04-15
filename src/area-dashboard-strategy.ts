@@ -288,7 +288,14 @@ class AreaViewStrategy extends HTMLTemplateElement {
 
         if (!currentArea) throw Error("No area defined");
 
-        const navCards = createGrid(navigation, usedAreas, { placeholder: "$area", key: "area_id", replaces: [["$currArea", currentArea.area_id]] });
+        // Add the area name to the replaces configuration
+        const navReplaces = { 
+            placeholder: "$area", 
+            key: "area_id", 
+            replaces: [["$currArea", currentArea.area_id] as [string, string]], 
+            area: currentArea.name 
+        };
+        const navCards = createGrid(navigation, usedAreas, navReplaces);
 
         const navigationCard: LovelaceCardConfig = {
             type: "vertical-stack",
@@ -322,7 +329,15 @@ class AreaViewStrategy extends HTMLTemplateElement {
                     const filter = createRowFilter(merge, hass);
                     const sort = createRowSort(merge, hass);
                     const filteredEntities = entities.filter(filter).sort(sort);
-                    return createGrid(grid, filteredEntities);
+                    
+                    // Add the area name to the replaces configuration
+                    const entityReplaces = { 
+                        placeholder: "$entity", 
+                        key: "entity_id", 
+                        replaces: [["$area", currentArea.area_id] as [string, string]], 
+                        area: currentArea.name 
+                    };
+                    return createGrid(grid, filteredEntities, entityReplaces);
                 });
                 if (tabElements.length > 0) {
                     return {
