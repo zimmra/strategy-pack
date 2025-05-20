@@ -2,7 +2,7 @@
 
 [![Open in HACS at your Home Assistant instance.][hacsBadge]][strategyPackHacs]
 
-This is a collection of [Home Assistant Strategies](https://developers.home-assistant.io/docs/frontend/custom-ui/custom-strategy/).
+This is a test collection of [Home Assistant Strategies](https://developers.home-assistant.io/docs/frontend/custom-ui/custom-strategy/).
 
 A strategy is a piece of JavaScript code that runs when you open a page that is configured to use it to generate dashboards and views. They make it easy to create auto-populated dashboards with minimal configuration!
 
