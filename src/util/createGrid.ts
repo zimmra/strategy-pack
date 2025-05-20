@@ -70,147 +70,44 @@ export const mergeConfig = (
 };
 
 /**
- * Process Jinja2-like template strings with entity data
- * @param template The template string to process
+ * Execute a template string as JavaScript and return the resulting card config
+ *
+ * The template receives the entity id as `$entity`, the current area name as
+ * `$area` and a `state_attr` helper for accessing entity attributes. The
+ * template must return a valid card configuration object.
+ *
+ * @param template The template string to execute
  * @param entityData Entity data for variable substitution
  * @param area Current area name
- * @returns Parsed JSON result from the template
+ * @returns Parsed card configuration from the template
  */
-const processTemplate = (template: string, entityData: Record<string, any>, area: string): LovelaceCardConfig => {
+const processTemplate = (
+    template: string,
+    entityData: Record<string, any>,
+    area: string,
+): LovelaceCardConfig => {
     try {
-        // Replace $entity and $area variables
-        let processedTemplate = template
-            .replace(/\$entity/g, entityData.entity_id)
-            .replace(/\$area/g, area);
+        const state_attr = (_entity: string, attr: string) => {
+            return entityData.attributes ? entityData.attributes[attr] : undefined;
+        };
 
-        // Basic implementation of simple Jinja2-like syntax
-        // Process set statements
-        const setRegex = /{%-?\s*set\s+([a-zA-Z0-9_]+)\s*=\s*(.+?)\s*-?%}/g;
-        const variables: Record<string, string> = {};
-        
-        let match;
-        while ((match = setRegex.exec(processedTemplate)) !== null) {
-            const varName = match[1];
-            const varValue = match[2].trim();
-            
-            // Handle state_attr function
-            if (varValue.startsWith('state_attr(')) {
-                const attrRegex = /state_attr\(\s*([^,]+)\s*,\s*'([^']+)'\s*\)/;
-                const attrMatch = varValue.match(attrRegex);
-                if (attrMatch) {
-                    const entity = attrMatch[1] === '$entity' ? entityData.entity_id : attrMatch[1];
-                    const attrName = attrMatch[2];
-                    
-                    // For this implementation, we assume attributes are available in entityData
-                    if (entityData.attributes && entityData.attributes[attrName] !== undefined) {
-                        variables[varName] = JSON.stringify(entityData.attributes[attrName]);
-                    } else {
-                        variables[varName] = '""';
-                    }
-                }
-            } else if (varValue.startsWith("'") && varValue.endsWith("'")) {
-                // String literals
-                variables[varName] = varValue;
-            } else if (varValue === '$area') {
-                variables[varName] = `"${area}"`;
-            } else {
-                // Variable references
-                if (variables[varValue] !== undefined) {
-                    variables[varName] = variables[varValue];
-                } else {
-                    variables[varName] = '""';
-                }
-            }
-            
-            // Remove the set statement from the template
-            processedTemplate = processedTemplate.replace(match[0], '');
-        }
-        
-        // Process string methods like replace() and trim()
-        const methodRegex = /([a-zA-Z0-9_]+)\.replace\(([^,]+),\s*['"]([^'"]*)['"]\)\s*\|\s*trim/g;
-        while ((match = methodRegex.exec(processedTemplate)) !== null) {
-            const varName = match[1];
-            const searchStr = match[2].trim();
-            const replaceStr = match[3];
-            
-            if (variables[varName]) {
-                const value = JSON.parse(variables[varName]);
-                const searchValue = searchStr === 'current_area' ? area : searchStr;
-                const newValue = value.replace(searchValue, replaceStr).trim();
-                variables[varName] = `"${newValue}"`;
-            }
-            
-            // Don't remove this from the template yet as it might be part of a larger expression
-        }
-        
-        // Process conditionals (if/elif/endif)
-        const ifRegex = /{%-?\s*if\s+(.+?)\s*-?%}([\s\S]*?)(?:{%-?\s*elif\s+(.+?)\s*-?%}([\s\S]*?))*(?:{%-?\s*else\s*-?%}([\s\S]*?))?{%-?\s*endif\s*-?%}/g;
-        while ((match = ifRegex.exec(processedTemplate)) !== null) {
-            const condition = match[1];
-            const ifBlock = match[2];
-            // We'd need to extract all elif conditions and blocks, but for this simplified implementation 
-            // we'll just handle the if and else cases
-            const elseBlock = match[5] || '';
+        const fn = new Function(
+            "$entity",
+            "$area",
+            "state_attr",
+            `${template}`,
+        );
 
-            // Simple condition evaluation - we'll support a few common Home Assistant checks
-            let conditionMet = false;
-            
-            if (condition.includes('in state_attr')) {
-                // Handle 'in state_attr' conditions
-                const inAttrRegex = /'([^']+)'\s+in\s+state_attr\(\$entity,\s*'([^']+)'\)/;
-                const inAttrMatch = condition.match(inAttrRegex);
-                if (inAttrMatch) {
-                    const value = inAttrMatch[1];
-                    const attrName = inAttrMatch[2];
-                    
-                    if (entityData.attributes && 
-                        Array.isArray(entityData.attributes[attrName]) && 
-                        entityData.attributes[attrName].includes(value)) {
-                        conditionMet = true;
-                    } else if (entityData.attributes && 
-                        typeof entityData.attributes[attrName] === 'string' && 
-                        entityData.attributes[attrName].includes(value)) {
-                        conditionMet = true;
-                    }
-                }
-            } else if (condition.includes('in $entity')) {
-                // Handle 'in $entity' conditions
-                const inEntityRegex = /'([^']+)'\s+in\s+\$entity/;
-                const inEntityMatch = condition.match(inEntityRegex);
-                if (inEntityMatch) {
-                    const value = inEntityMatch[1];
-                    if (entityData.entity_id.includes(value)) {
-                        conditionMet = true;
-                    }
-                }
-            }
-            
-            // Replace the entire if block with the appropriate content
-            processedTemplate = processedTemplate.replace(
-                match[0], 
-                conditionMet ? ifBlock : elseBlock
-            );
-        }
-        
-        // Replace variable references with their values
-        for (const [varName, value] of Object.entries(variables)) {
-            const regex = new RegExp(`([^a-zA-Z0-9_])${varName}([^a-zA-Z0-9_])`, 'g');
-            processedTemplate = processedTemplate.replace(regex, `$1${value}$2`);
+        const result = fn(entityData.entity_id, area, state_attr);
+
+        if (typeof result === "object" && result !== null) {
+            return result as LovelaceCardConfig;
         }
 
-        // Clean the template by removing any extra whitespace and commas
-        processedTemplate = processedTemplate
-            .replace(/,\s*}}/g, '}}')
-            .replace(/,\s*,/g, ',')
-            .replace(/\s+/g, ' ')
-            .trim();
-        
-        // Parse the processed template to get a valid JSON object
-        return JSON.parse(processedTemplate);
+        throw new Error("Template did not return an object");
     } catch (error) {
         console.error("Error processing template:", error);
         console.error("Template:", template);
-        // Fallback to a basic card if template processing fails
         return {
             type: "markdown",
             content: `Error processing template for ${entityData.entity_id}`,

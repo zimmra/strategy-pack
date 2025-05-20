@@ -432,31 +432,27 @@ export interface GridStrategyCardConfig {
 
     /**
      * @description
-     * A template string that generates a card configuration.
-     * Supports Jinja2-like syntax including conditionals, variables, and functions.
-     * The template will be processed and should return valid JSON for a card configuration.
-     * @remarks
-     * Use the $entity variable to reference the current entity ID and $area for the current area.
-     * Supports common Home Assistant template functions like state_attr().
+     * JavaScript template that returns a card configuration.
+     * The variables `$entity` (entity id), `$area` (area name) and a helper
+     * `state_attr(entity, attr)` are available inside the template. The template
+     * must return a valid object which will be used as the card configuration.
      * @example
      * ```yaml
      * template: |-
-     *   {%- set current_area = '$area' -%}
-     *   {%- set friendly_name = state_attr($entity, 'friendly_name') -%}
-     *   {%- set adjusted_name = friendly_name.replace(current_area, '') | trim -%}
-     *   {%- if 'color_temp' in state_attr($entity, 'supported_color_modes') -%}
-     *     {{
-     *       {
-     *         'entity': $entity,
-     *         'name': adjusted_name,
-     *         'type': 'custom:mushroom-light-card',
-     *         'show_brightness_control': true,
-     *         'show_color_temp_control': true,
-     *         'collapsible_controls': true,
-     *         'use_light_color': true
-     *       } 
-     *     }}
-     *   {%- endif -%}
+     *   const name = state_attr($entity, 'friendly_name')
+     *     .replace($area, '')
+     *     .trim();
+     *   if (state_attr($entity, 'supported_color_modes')?.includes('color_temp')) {
+     *     return {
+     *       entity: $entity,
+     *       name,
+     *       type: 'custom:mushroom-light-card',
+     *       show_brightness_control: true,
+     *       show_color_temp_control: true,
+     *       collapsible_controls: true,
+     *       use_light_color: true
+     *     };
+     *   }
      * ```
      */
     template?: string;
