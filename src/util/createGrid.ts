@@ -24,8 +24,11 @@ export const mergeConfig = (
         throw Error(state.success ? "Something went wrong. Check config." : JSON.stringify(state.errors));
     }
 
+    // Cast localMerge to full BaseGridOptions so that grids can be assigned
+    const typedMerge = localMerge as BaseGridOptions<BaseRowOptions | BaseRowRefOptions>;
+
     const grids =
-        localMerge.gridMergeStrategy == GridMergeStrategy.reset
+        typedMerge.gridMergeStrategy == GridMergeStrategy.reset
             ? configs
                   .map((c) => c.grids)
                   .filter(notNil)
@@ -44,7 +47,7 @@ export const mergeConfig = (
                     throw Error(`gridId '${currRef.gridId}' not defined`);
                 }
             } else {
-                const grid = mergeWith({}, localMerge.global, curr, arrayCustomizer);
+                const grid = mergeWith({}, typedMerge.global, curr, arrayCustomizer);
                 if (!typia.is<BaseRowOptions>(grid)) {
                     const state = typia.validate<BaseRowOptions>(grid);
                     throw Error(state.success ? "Something went wrong. Check config." : JSON.stringify(state.errors));
@@ -55,17 +58,17 @@ export const mergeConfig = (
         },
         {} as Record<string, BaseRowOptions>,
     );
-    localMerge.grids = Object.values(resolvedGrids).sort((a, b) => (a.position || 0) - (b.position || 0));
+    typedMerge.grids = Object.values(resolvedGrids).sort((a, b) => (a.position || 0) - (b.position || 0));
 
-    if (!typia.is<BaseGridOptions<BaseRowOptions>>(localMerge)) {
-        const state = typia.validate<BaseGridOptions<BaseRowOptions>>(localMerge);
+    if (!typia.is<BaseGridOptions<BaseRowOptions>>(typedMerge)) {
+        const state = typia.validate<BaseGridOptions<BaseRowOptions>>(typedMerge);
         throw Error(state.success ? "Something went wrong. Check config." : JSON.stringify(state.errors));
     }
 
     // Ensure grids is never undefined in the return value
     return {
-        ...localMerge,
-        grids: localMerge.grids || []
+        ...typedMerge,
+        grids: typedMerge.grids || []
     } as Omit<BaseGridOptions<BaseRowOptions>, "global" | "gridMergeStrategy">;
 };
 
