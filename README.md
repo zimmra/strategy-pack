@@ -31,7 +31,8 @@ config:
           - type: domain
             value: light
       card:
-        template: |
+        type: 'custom:mushroom-light-card'
+      template: |
           const name = state_attr($entity, 'friendly_name')
             .replace($area, '')
             .trim();
